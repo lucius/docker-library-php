@@ -9,10 +9,12 @@ FROM debian:jessie
 # persistent / runtime deps
 ENV PHPIZE_DEPS \
 		autoconf \
+		dpkg-dev \
 		file \
 		g++ \
 		gcc \
 		libc-dev \
+		libpcre3-dev \
 		make \
 		pkg-config \
 		re2c
@@ -99,7 +101,10 @@ RUN set -xe \
 		LDFLAGS="$PHP_LDFLAGS" \
 	&& docker-php-source extract \
 	&& cd /usr/src/php \
+	&& gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
+	&& debMultiarch="$(dpkg-architecture --query DEB_BUILD_MULTIARCH)" \
 	&& ./configure \
+		--build="$gnuArch" \
 		--with-config-file-path="$PHP_INI_DIR" \
 		--with-config-file-scan-dir="$PHP_INI_DIR/conf.d" \
 		\
@@ -117,14 +122,24 @@ RUN set -xe \
 		--with-openssl \
 		--with-zlib \
 		\
+# bundled pcre is too old for s390x (which isn't exactly a good sign)
+# /usr/src/php/ext/pcre/pcrelib/pcre_jit_compile.c:65:2: error: #error Unsupported architecture
+		--with-pcre-regex=/usr \
+		--with-libdir="lib/$debMultiarch" \
+		\
 		$PHP_EXTRA_CONFIGURE_ARGS \
 	&& make -j "$(nproc)" \
 	&& make install \
 	&& { find /usr/local/bin /usr/local/sbin -type f -executable -exec strip --strip-all '{}' + || true; } \
 	&& make clean \
+	&& cd / \
 	&& docker-php-source delete \
 	\
-	&& apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $buildDeps
+	&& apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $buildDeps \
+	\
+# https://github.com/docker-library/php/issues/443
+	&& pecl update-channels \
+	&& rm -rf /tmp/pear ~/.pearrc
 
 COPY docker-php-ext-* docker-php-entrypoint /usr/local/bin/
 

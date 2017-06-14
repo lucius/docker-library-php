@@ -9,11 +9,13 @@ FROM alpine:3.4
 # persistent / runtime deps
 ENV PHPIZE_DEPS \
 		autoconf \
+		dpkg-dev dpkg \
 		file \
 		g++ \
 		gcc \
 		libc-dev \
 		make \
+		pcre-dev \
 		pkgconf \
 		re2c
 RUN apk add --no-cache --virtual .persistent-deps \
@@ -50,9 +52,9 @@ ENV PHP_LDFLAGS="-Wl,-O1 -Wl,--hash-style=both -pie"
 
 ENV GPG_KEYS 1A4E8B7277C42E53DBA9C7B9BCAA30EA9C0D5763 6E4F6AB321FDC07F2C332E3AC2BF0BC433CFC8B3
 
-ENV PHP_VERSION 7.0.17
-ENV PHP_URL="https://secure.php.net/get/php-7.0.17.tar.xz/from/this/mirror" PHP_ASC_URL="https://secure.php.net/get/php-7.0.17.tar.xz.asc/from/this/mirror"
-ENV PHP_SHA256="471c16fcdd6a5e1a37199e97bcaeea6117626229785185be7532aaa7c6ee04be" PHP_MD5="549df69a7a3c79d49fcafe2097579d9e"
+ENV PHP_VERSION 7.0.20
+ENV PHP_URL="https://secure.php.net/get/php-7.0.20.tar.xz/from/this/mirror" PHP_ASC_URL="https://secure.php.net/get/php-7.0.20.tar.xz.asc/from/this/mirror"
+ENV PHP_SHA256="31b9cf1fb83fe3cd82c2f6603a0ae81ae6abacb5286827e362d8f85e68908e0a" PHP_MD5="e84615871c1c6dbd0860746a31f3a7c8"
 
 RUN set -xe; \
 	\
@@ -90,6 +92,7 @@ COPY docker-php-source /usr/local/bin/
 RUN set -xe \
 	&& apk add --no-cache --virtual .build-deps \
 		$PHPIZE_DEPS \
+		coreutils \
 		curl-dev \
 		libedit-dev \
 		libxml2-dev \
@@ -101,7 +104,9 @@ RUN set -xe \
 		LDFLAGS="$PHP_LDFLAGS" \
 	&& docker-php-source extract \
 	&& cd /usr/src/php \
+	&& gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
 	&& ./configure \
+		--build="$gnuArch" \
 		--with-config-file-path="$PHP_INI_DIR" \
 		--with-config-file-scan-dir="$PHP_INI_DIR/conf.d" \
 		\
@@ -119,11 +124,16 @@ RUN set -xe \
 		--with-openssl \
 		--with-zlib \
 		\
+# bundled pcre is too old for s390x (which isn't exactly a good sign)
+# /usr/src/php/ext/pcre/pcrelib/pcre_jit_compile.c:65:2: error: #error Unsupported architecture
+		--with-pcre-regex=/usr \
+		\
 		$PHP_EXTRA_CONFIGURE_ARGS \
-	&& make -j "$(getconf _NPROCESSORS_ONLN)" \
+	&& make -j "$(nproc)" \
 	&& make install \
 	&& { find /usr/local/bin /usr/local/sbin -type f -perm +0111 -exec strip --strip-all '{}' + || true; } \
 	&& make clean \
+	&& cd / \
 	&& docker-php-source delete \
 	\
 	&& runDeps="$( \
@@ -135,7 +145,11 @@ RUN set -xe \
 	)" \
 	&& apk add --no-cache --virtual .php-rundeps $runDeps \
 	\
-	&& apk del .build-deps
+	&& apk del .build-deps \
+	\
+# https://github.com/docker-library/php/issues/443
+	&& pecl update-channels \
+	&& rm -rf /tmp/pear ~/.pearrc
 
 COPY docker-php-ext-* docker-php-entrypoint /usr/local/bin/
 
