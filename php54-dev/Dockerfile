@@ -1,4 +1,4 @@
-FROM php:5.6-apache
+FROM mvbortolotti/php54
 
 RUN apt-get update && apt-get install -y \
 	libmcrypt-dev \
