@@ -15,9 +15,10 @@ RUN curl https://xdebug.org/files/xdebug-2.4.0.tgz -o xdebug-2.4.0.tgz \
 
 RUN apt-get update && apt-get install -y \
 	libmcrypt-dev \
+	zlib1g-dev \
 	vim \
-	&& docker-php-ext-install pdo pdo_mysql mysql mcrypt \
-	&& docker-php-ext-enable pdo pdo_mysql mysql mcrypt
+	&& docker-php-ext-install pdo pdo_mysql mysql mcrypt zip \
+	&& docker-php-ext-enable pdo pdo_mysql mysql mcrypt zip
 
 RUN a2enmod rewrite
 RUN a2enmod headers
