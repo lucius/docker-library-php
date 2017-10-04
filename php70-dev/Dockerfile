@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
 	vim \
 	libmagickwand-dev \
 	libmagickcore-dev \
-	&& docker-php-ext-install pdo pdo_mysql mysql mcrypt zip \
+	&& docker-php-ext-install pdo pdo_mysql mysqli mcrypt zip \
 	&& pecl install xdebug-2.5.0 \
 	&& echo "zend_extension=$(find /usr/local/lib/php/extensions/ -name xdebug.so)" > /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
 	&& echo "xdebug.remote_port=9000" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
