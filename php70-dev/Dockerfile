@@ -8,10 +8,17 @@ RUN apt-get update && apt-get install -y \
 	libmagickcore-dev \
 	locales
 
-RUN locale-gen pt_BR \
-	&& locale-gen pt_BR.UTF-8 \
-	&& dpkg-reconfigure locales \
+RUN sed -i -e 's/# pt_BR.UTF-8 UTF-8/pt_BR.UTF-8 UTF-8/' /etc/locale.gen \
+	&& sed -i -e 's/# pt_BR ISO-8859-1/pt_BR ISO-8859-1/' /etc/locale.gen \
+	&& locale-gen
+
+ENV LANGUAGE=pt_BR.UTF-8
+ENV LANG=pt_BR.UTF-8
+ENV LC_ALL=pt_BR.UTF-8
+
+RUN dpkg-reconfigure --frontend=noninteractive locales \
 	&& update-locale LANG=pt_BR.UTF-8
+
 
 RUN docker-php-ext-install pdo pdo_mysql mysqli mcrypt zip \
 	&& pecl install xdebug-2.5.0 \
