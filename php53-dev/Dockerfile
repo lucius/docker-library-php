@@ -16,7 +16,13 @@ RUN apt-get update && \
       curl \
       php5-xdebug \
       php5-curl \
-      mysql-client
+      mysql-client \
+      locales
+
+RUN locale-gen pt_BR \
+  && locale-gen pt_BR.UTF-8 \
+  && dpkg-reconfigure locales \
+  && update-locale LANG=pt_BR.UTF-8
 
 RUN set -e && \
     PHP_ERROR_REPORTING=${PHP_ERROR_REPORTING:-"E_ALL & ~E_DEPRECATED & ~E_NOTICE"} && \

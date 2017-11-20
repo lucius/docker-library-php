@@ -19,7 +19,14 @@ RUN apt-get update && apt-get install -y \
 	libmagickwand-dev \
 	libmagickcore-dev \
 	vim \
-	&& docker-php-ext-install pdo pdo_mysql mysql mcrypt zip \
+	locales
+
+RUN locale-gen pt_BR \
+	&& locale-gen pt_BR.UTF-8 \
+	&& dpkg-reconfigure locales \
+	&& update-locale LANG=pt_BR.UTF-8
+
+RUN docker-php-ext-install pdo pdo_mysql mysql mcrypt zip \
 	&& pecl install imagick \
 	&& docker-php-ext-enable imagick
 
